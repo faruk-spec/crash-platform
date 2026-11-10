@@ -4,6 +4,12 @@
 # Target: Ubuntu 22.04 / 24.04 LTS with aaPanel / Apache / PHP 8.3+ / MySQL 8.0
 # ==============================================================================
 
+# Ensure script runs with superuser privileges
+if [ "$EUID" -ne 0 ]; then
+    echo "Privilege escalation required. Re-running with sudo..."
+    exec sudo bash "$0" "$@"
+fi
+
 set -e
 
 echo "=== [1/5] Initializing Directory Structure ==="
@@ -24,10 +30,11 @@ elif id "www-data" &>/dev/null; then
     WEB_USER="www-data"
     WEB_GROUP="www-data"
 else
-    WEB_USER="$USER"
-    WEB_GROUP="$USER"
+    WEB_USER="$SUDO_USER"
+    WEB_GROUP="$SUDO_USER"
 fi
 
+echo "Assigning ownership to: $WEB_USER:$WEB_GROUP"
 chown -R "$WEB_USER:$WEB_GROUP" "$BASE_DIR"
 chmod -R 775 "$BASE_DIR/shared/storage"
 
@@ -99,7 +106,7 @@ echo ""
 echo "3. Add your SSH Private Key to GitHub Secrets:"
 echo "   Settings -> Secrets and variables -> Actions"
 echo "   - VPS_HOST: $(curl -s ifconfig.me || echo 'YOUR_VPS_IP')"
-echo "   - VPS_USERNAME: root"
-echo "   - VPS_SSH_PRIVATE_KEY: (Contents of your id_rsa)"
+echo "   - VPS_USERNAME: ubuntu (or root)"
+echo "   - VPS_SSH_PRIVATE_KEY: (Contents of your id_rsa or .pem file)"
 echo ""
 echo "Setup Complete! VPS is ready for automated GitHub Actions deployment."
