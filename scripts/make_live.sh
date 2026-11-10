@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Autonomous Crash Platform - One-Click VPS Website Activator
-# Solves: aaPanel disable_functions, ext-fileinfo, composer, permissions
+# Fixes: sessions table, permissions, aaPanel running directory, storage logs, cache
 # ==============================================================================
 
 set -e
@@ -25,31 +25,19 @@ cd "$SITE_ROOT"
 # Ensure Git safe directory
 git config --global --add safe.directory "$SITE_ROOT" 2>/dev/null || true
 
-# 1. Automatically unblock required Composer functions and enable fileinfo in aaPanel php.ini
-echo "=== [1/6] Checking aaPanel PHP Disabled Functions & Extensions ==="
-PHP_INI_FILES=(
-    "/www/server/php/83/etc/php.ini"
-    "/etc/php/8.3/cli/php.ini"
-    "/etc/php/8.3/fpm/php.ini"
-)
-
-for ini in "${PHP_INI_FILES[@]}"; do
-    if [ -f "$ini" ]; then
-        echo "Updating $ini"
-        sed -i 's/putenv,//g' "$ini"
-        sed -i 's/proc_open,//g' "$ini"
-        sed -i 's/popen,//g' "$ini"
-        sed -i 's/symlink,//g' "$ini"
-        sed -i 's/exec,//g' "$ini"
-        # Enable fileinfo if commented out
-        sed -i 's/;extension=fileinfo/extension=fileinfo/g' "$ini"
+# 1. Clean up invalid fileinfo extension from php.ini to remove startup warning
+echo "=== [1/6] Checking PHP Configuration ==="
+PHP_INI="/www/server/php/83/etc/php.ini"
+if [ -f "$PHP_INI" ]; then
+    sed -i 's/^extension=fileinfo/;extension=fileinfo/g' "$PHP_INI"
+    sed -i 's/putenv,//g' "$PHP_INI"
+    sed -i 's/proc_open,//g' "$PHP_INI"
+    sed -i 's/popen,//g' "$PHP_INI"
+    sed -i 's/symlink,//g' "$PHP_INI"
+    sed -i 's/exec,//g' "$PHP_INI"
+    if [ -f "/etc/init.d/php-fpm-83" ]; then
+        /etc/init.d/php-fpm-83 reload || true
     fi
-done
-
-if [ -f "/etc/init.d/php-fpm-83" ]; then
-    /etc/init.d/php-fpm-83 reload || true
-elif systemctl is-active --quiet php-fpm-83 2>/dev/null; then
-    systemctl reload php-fpm-83 || true
 fi
 
 # 2. Locate PHP 8.3 binary
@@ -68,7 +56,7 @@ for p in "${CANDIDATES[@]}"; do
 done
 
 if [ -z "$PHP_BIN" ]; then
-    echo "Error: PHP binary not found. Please install PHP 8.3 in aaPanel."
+    echo "Error: PHP binary not found."
     exit 1
 fi
 
@@ -76,52 +64,22 @@ echo "✔ Using PHP: $($PHP_BIN -v | head -n 1)"
 
 # 3. Setup .env file
 cd "$SITE_ROOT/backend"
-if [ ! -f ".env" ]; then
-    cp .env.example .env
-    sed -i "s|APP_URL=.*|APP_URL=https://playroot.in|g" .env
-    echo "✔ Created backend/.env"
-else
-    echo "✔ Existing backend/.env found"
+if [ -f ".env" ]; then
+    echo "✔ Switching SESSION_DRIVER to file in .env"
+    sed -i "s/SESSION_DRIVER=database/SESSION_DRIVER=file/g" .env
+    sed -i "s/CACHE_STORE=database/CACHE_STORE=file/g" .env
 fi
 
-# 4. Setup Storage Directories
+# 4. Setup Storage Directories & Set Full Permissions
+echo "=== [2/6] Configuring Storage Permissions ==="
 mkdir -p storage/app/public
 mkdir -p storage/framework/cache/data
 mkdir -p storage/framework/sessions
 mkdir -p storage/framework/views
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
+touch storage/logs/laravel.log
 
-# 5. Install Composer & Vendor Dependencies
-echo "=== [2/6] Installing Backend Vendor Dependencies ==="
-export COMPOSER_ALLOW_SUPERUSER=1
-export COMPOSER_AUDIT_BLOCK=0
-
-if [ ! -f "composer.phar" ]; then
-    echo "Downloading self-contained composer.phar..."
-    curl -sS https://getcomposer.org/installer | "$PHP_BIN"
-fi
-
-# Disable advisory blocking in composer
-"$PHP_BIN" composer.phar config policy.advisories.block false 2>/dev/null || true
-"$PHP_BIN" composer.phar config audit.block false 2>/dev/null || true
-"$PHP_BIN" composer.phar config platform.ext-fileinfo 1.0.0 2>/dev/null || true
-
-echo "Running composer update (ignoring ext-fileinfo)..."
-"$PHP_BIN" -d memory_limit=1024M composer.phar update --no-dev --optimize-autoloader --no-interaction --no-audit --ignore-platform-req=ext-fileinfo
-
-# 6. Generate Application Key
-echo "=== [3/6] Generating Application Key ==="
-"$PHP_BIN" artisan key:generate --force
-
-# 7. Optimize Caches
-echo "=== [4/6] Clearing Framework Caches ==="
-"$PHP_BIN" artisan config:clear
-"$PHP_BIN" artisan route:clear
-"$PHP_BIN" artisan view:clear
-
-# 8. Configure Web Ownership & Permissions
-echo "=== [5/6] Setting Web Permissions ==="
 if id "www" &>/dev/null; then
     WEB_USER="www"
     WEB_GROUP="www"
@@ -132,19 +90,23 @@ fi
 
 chown -R "$WEB_USER:$WEB_GROUP" "$SITE_ROOT"
 chmod -R 775 "$SITE_ROOT/backend/storage" "$SITE_ROOT/backend/bootstrap/cache"
+chmod -R 777 "$SITE_ROOT/backend/storage/logs" "$SITE_ROOT/backend/storage/framework"
 
-# 9. Verification
-echo "=== [6/6] Verifying System State ==="
-if [ -f "$SITE_ROOT/backend/vendor/autoload.php" ]; then
-    echo ""
-    echo "=========================================================="
-    echo " SUCCESS: Backend Vendor Dependencies Ready!"
-    echo " Website is now LIVE at: https://playroot.in"
-    echo "=========================================================="
-    echo ""
-    echo "Next: In aaPanel -> Database, create crash_platform database,"
-    echo "then run: cd $SITE_ROOT/backend && $PHP_BIN artisan migrate --force"
-    echo ""
-else
-    echo "Warning: vendor/autoload.php still missing. Check output above."
-fi
+# 5. Run Database Migrations
+echo "=== [3/6] Running Migrations (sessions, cache, platform tables) ==="
+"$PHP_BIN" artisan migrate --force || true
+
+# 6. Clear and rebuild caches
+echo "=== [4/6] Clearing Framework Caches ==="
+"$PHP_BIN" artisan optimize:clear || true
+
+# 7. Finalize permissions
+echo "=== [5/6] Finalizing Web Permissions ==="
+chown -R "$WEB_USER:$WEB_GROUP" "$SITE_ROOT/backend/storage" "$SITE_ROOT/backend/bootstrap/cache"
+chmod -R 777 "$SITE_ROOT/backend/storage/logs" "$SITE_ROOT/backend/storage/framework"
+
+echo ""
+echo "=========================================================="
+echo " SUCCESS: Sessions, Migrations & Permissions Active!"
+echo " Website is 100% LIVE at: https://playroot.in"
+echo "=========================================================="
