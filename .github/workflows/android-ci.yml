@@ -49,6 +49,17 @@ jobs:
             exit $GRADLE_EXIT
           fi
 
+      - name: Dump and Commit Error Log On Failure
+        if: failure()
+        run: |
+          echo "=== CAPTURING GRADLE FAILURE ==="
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tail -n 200 /tmp/gradle_build.log > build_failure.txt
+          git add build_failure.txt
+          git commit -m "chore(debug): capture build failure log [skip ci]" || true
+          git push origin main || true
+
       - name: Upload Build Log On Failure
         if: failure()
         uses: actions/upload-artifact@v4
