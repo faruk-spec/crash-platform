@@ -55,6 +55,10 @@ android {
     }
 }
 
+tasks.withType<JavaCompile>().configureEach {
+    options.encoding = "UTF-8"
+}
+
 dependencies {
     // Core AndroidX
     implementation("androidx.core:core-ktx:1.12.0")

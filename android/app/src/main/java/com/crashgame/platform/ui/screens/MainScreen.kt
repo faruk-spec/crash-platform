@@ -157,7 +157,7 @@ fun MainScreen(
                             )
                         }
                         Column {
-                            Text(text = "TRAIL CURVATURE (κ)", color = Color(0xFF64748B), fontSize = 10.sp)
+                            Text(text = "TRAIL CURVATURE (k)", color = Color(0xFF64748B), fontSize = 10.sp)
                             Text(
                                 text = String.format("%.4f", roundState.trailCurvatureK),
                                 color = Color(0xFF38BDF8),
