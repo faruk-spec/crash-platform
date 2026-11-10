@@ -1,9 +1,8 @@
-# Monorepo Apache Configuration
-# If aaPanel 'Running directory' is set to /backend/public, this file is bypassed.
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # If backend/public exists, rewrite all root requests into it
     RewriteCond %{REQUEST_URI} !^/backend/public/
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ backend/public/index.php [L]
+    RewriteRule ^(.*)$ backend/public/$1 [L]
 </IfModule>
+

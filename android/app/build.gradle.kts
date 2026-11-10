@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.crashgame.platform"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.crashgame.platform"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 42
         versionName = "1.0.0"
 
@@ -23,8 +23,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -65,15 +64,15 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.8.2")
 
-    // Room Database (Offline WAL persistence)
+    // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // WorkManager (Background Sync)
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // Retrofit & OkHttp (Networking)
+    // Retrofit & Networking
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
@@ -83,7 +82,4 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
-

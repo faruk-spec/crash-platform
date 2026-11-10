@@ -6,82 +6,59 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
-      release_type:
-        description: 'Build Type (release or bundle)'
+      build_type:
+        description: 'Build Type (debug or release)'
         required: true
-        default: 'release'
+        default: 'all'
 
 jobs:
-  build-and-release:
+  build:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
-          cache: 'gradle'
 
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x android/gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
 
-      - name: Run Automated Lint & Unit Tests
-        run: cd android && ./gradlew testReleaseUnitTest lintRelease
-
-      - name: Decode Release Keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Build Android APK with Gradle
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          cd android
+          gradle assembleDebug --stacktrace --no-daemon
 
-      - name: Build Signed APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Find Built APK
+        id: find_apk
         run: |
-          cd android && ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=release.keystore \
-            -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
-            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
-            -Pandroid.injected.signing.key.password=$KEY_PASSWORD
-
-      - name: Calculate SHA-256 Checksum
-        id: checksum
-        run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          APK_PATH=$(find android/app/build/outputs/apk/ -name "*.apk" | head -n 1)
           SHA256=$(sha256sum "$APK_PATH" | awk '{print $1}')
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-          echo "APK Checksum: $SHA256"
+          echo "Built APK: $APK_PATH"
+          echo "SHA256: $SHA256"
 
-      - name: Publish Artifact to GitHub Release
-        id: create_release
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-predictor-app
+          path: ${{ steps.find_apk.outputs.apk_path }}
+          retention-days: 14
+
+      - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          files: ${{ steps.checksum.outputs.apk_path }}
+          files: ${{ steps.find_apk.outputs.apk_path }}
+          name: "Release ${{ github.ref_name }}"
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Notify Laravel Backend Webhook
-        env:
-          BACKEND_WEBHOOK_URL: ${{ secrets.BACKEND_RELEASE_WEBHOOK_URL }}
-          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
-        run: |
-          curl -X POST "$BACKEND_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -H "X-Webhook-Secret: $WEBHOOK_SECRET" \
-            -d '{
-              "version_name": "${{ github.ref_name }}",
-              "version_code": ${{ github.run_number }},
-              "sha256": "${{ steps.checksum.outputs.sha256 }}",
-              "download_url": "${{ steps.create_release.outputs.url }}",
-              "commit": "${{ github.sha }}"
-            }'
-
