@@ -20,3 +20,4 @@ Data collection is performed by `injected_harvester.js` running inside the Andro
 ### Storage & Transmission
 * Every round and observation is stored locally in SQLite (`game_rounds`, `raw_observations`).
 * Batches are synchronized via Android `WorkManager` using idempotent HTTP POST requests with SHA-256 payload checksums.
+

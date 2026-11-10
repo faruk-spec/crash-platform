@@ -24,3 +24,4 @@ All endpoints accept and return `application/json`, require HTTPS in production,
 ### 5. Round Analytics
 * `GET /api/v1/rounds/history`: Paginated list of historical crash rounds.
 * `GET /api/v1/analytics/realtime-summary`: Real-time crash statistics and current sub-2.0x streak.
+

@@ -72,3 +72,4 @@ class DeviceController {
         ], 200);
     }
 }
+

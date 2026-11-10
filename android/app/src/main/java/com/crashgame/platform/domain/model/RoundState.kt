@@ -14,3 +14,4 @@ data class RoundState(
     val predictionSignal: String = "NO_SIGNAL",
     val predictionConfidence: Float = 0.0f
 )
+

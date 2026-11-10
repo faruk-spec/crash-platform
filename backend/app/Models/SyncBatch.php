@@ -31,3 +31,4 @@ class SyncBatch extends Model {
         return $this->hasMany(SyncFailure::class, 'batch_id');
     }
 }
+

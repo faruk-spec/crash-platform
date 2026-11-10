@@ -28,3 +28,4 @@ The platform relies on a normalized MySQL 8.0 database partitioned across 7 func
 23. `deployments`: Release deployment history on the VPS.
 24. `system_settings`: Global key-value operational configuration.
 25. `audit_logs`: Security and administrative audit trail.
+

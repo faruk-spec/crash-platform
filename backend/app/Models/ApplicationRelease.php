@@ -25,3 +25,4 @@ class ApplicationRelease extends Model {
         'is_published' => 'boolean'
     ];
 }
+

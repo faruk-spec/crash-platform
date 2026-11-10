@@ -20,3 +20,4 @@ data class GameRoundEntity(
     val isSynced: Boolean = false,
     val createdAtMs: Long = System.currentTimeMillis()
 )
+

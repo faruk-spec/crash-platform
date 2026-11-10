@@ -29,3 +29,4 @@
 2. **Idempotency**: All batch synchronization requests carry a client-generated UUID and SHA-256 payload checksum.
 3. **No Paid APIs**: The entire predictive and vision stack runs self-hosted on your own hardware/VPS.
 4. **Zero-Downtime Deployments**: Deployments to Ubuntu aaPanel VPS utilize atomic symlink switching (`current -> releases/TIMESTAMP`).
+

@@ -15,3 +15,4 @@ The entire analytical pipeline is self-contained and operates without third-part
    Models are evaluated strictly chronologically (training on rounds $1..T$, testing on $T+1..T+K$) to prevent lookahead bias.
 3. **Strict "NO SIGNAL" Policy**:
    If the conditional survival probability is below the administrator-configured threshold (e.g. 75%), or if sample size is insufficient, the engine emits `NO_SIGNAL`. Predictions are never fabricated.
+

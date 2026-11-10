@@ -38,3 +38,4 @@ class Device extends Model {
         return $this->hasMany(SyncBatch::class);
     }
 }
+

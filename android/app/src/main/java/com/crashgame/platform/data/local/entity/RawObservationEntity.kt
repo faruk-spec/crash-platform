@@ -16,3 +16,4 @@ data class RawObservationEntity(
     val capturedAtMs: Long,
     val isSynced: Boolean = false
 )
+

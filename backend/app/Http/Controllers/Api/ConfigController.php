@@ -72,3 +72,4 @@ class ConfigController {
         ], 200);
     }
 }
+

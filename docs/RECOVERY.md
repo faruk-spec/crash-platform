@@ -20,3 +20,4 @@ PREV_RELEASE=$(ls -td releases/* | sed -n '2p')
 ln -nfs "$PREV_RELEASE" current
 systemctl reload php-fpm-83 || systemctl reload apache2
 ```
+

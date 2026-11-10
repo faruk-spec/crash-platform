@@ -14,3 +14,4 @@
    * Never stores or attempts to collect user passwords, banking info, or session tokens.
 5. **In-App Package Integrity**:
    * Every APK downloaded for auto-updating is verified against a SHA-256 hash before `PackageInstaller` launch.
+

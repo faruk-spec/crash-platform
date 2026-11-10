@@ -28,3 +28,4 @@ The platform utilizes GitHub Actions for continuous integration, automated Andro
   5. Executes database migrations (`php artisan migrate --force`).
   6. Executes atomic symlink switch (`current -> releases/TIMESTAMP`).
   7. Reloads PHP 8.3 FPM and restarts Horizon queues.
+

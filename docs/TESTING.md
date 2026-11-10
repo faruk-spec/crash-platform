@@ -23,3 +23,4 @@
   * Chronological monotonic timestamp validation.
 * **Brier Score Baseline**:
   * Model must outperform random uniform coin-flip baseline ($BS \le 0.25$).
+

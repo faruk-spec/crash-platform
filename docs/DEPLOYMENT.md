@@ -46,3 +46,4 @@ Set the following secrets in your GitHub repository (`Settings -> Secrets and va
 * `KEY_PASSWORD`: Keystore alias password
 * `BACKEND_RELEASE_WEBHOOK_URL`: `https://your-domain.com/api/v1/github/build-complete`
 * `WEBHOOK_SECRET`: Secure secret string matching `GITHUB_WEBHOOK_SECRET` in `.env`
+

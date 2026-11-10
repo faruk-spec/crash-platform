@@ -6,3 +6,4 @@ plugins {
 
 rootProject.name = "CrashGamePlatform"
 include(":app")
+

@@ -156,3 +156,4 @@
 
     console.log("[HARVESTER] Injected Harvester active on target page.");
 })();
+

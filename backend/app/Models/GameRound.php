@@ -42,3 +42,4 @@ class GameRound extends Model {
         return $this->hasMany(PredictionRecord::class, 'round_id');
     }
 }
+

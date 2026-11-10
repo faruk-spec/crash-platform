@@ -61,3 +61,4 @@ Route::prefix('admin')->group(function () {
         return redirect('/admin/github')->with('message', 'Cloud build triggered successfully!');
     });
 });
+

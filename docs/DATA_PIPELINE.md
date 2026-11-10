@@ -25,3 +25,4 @@ Candidate models are evaluated against chronological out-of-sample holdout sets.
 [ Stage 8: Live Signal Distribution ]
 Verified models push conditional survival probabilities to edge devices.
 ```
+

@@ -90,3 +90,4 @@ class CrashPredictorEngine:
                 "confidence": round(cond_prob_2x, 4),
                 "reason": "BELOW_CONFIDENCE_THRESHOLD"
             }
+

@@ -105,3 +105,4 @@ class AppUpdateManager(
         context.startActivity(installIntent)
     }
 }
+

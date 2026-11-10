@@ -75,3 +75,4 @@ class BatchSyncWorker(
         return bytes.joinToString("") { "%02x".format(it) }
     }
 }
+

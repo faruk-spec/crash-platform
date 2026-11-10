@@ -24,3 +24,4 @@
 * Downloads signed APK directly to app-private cache.
 * Verifies SHA-256 cryptographic signature.
 * Triggers native Android installation without requiring Google Play.
+

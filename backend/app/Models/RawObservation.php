@@ -32,3 +32,4 @@ class RawObservation extends Model {
         return $this->belongsTo(GameRound::class, 'round_id');
     }
 }
+
