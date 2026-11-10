@@ -83,3 +83,4 @@ echo "2. In aaPanel -> URL rewrite:"
 echo "   Select 'Laravel' preset and click Save."
 echo "3. Update your DB_PASSWORD in /www/wwwroot/playroot.in/backend/.env"
 echo "4. Run database migrations: cd /www/wwwroot/playroot.in/backend && php artisan migrate --force"
+

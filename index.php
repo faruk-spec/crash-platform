@@ -12,3 +12,4 @@ if (file_exists($publicPath)) {
     echo "<h1>Crash Platform Monorepo</h1>";
     echo "<p>Backend files detected. Please run <code>composer install</code> inside the <code>backend/</code> folder.</p>";
 }
+
