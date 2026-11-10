@@ -7,9 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build Type (debug or release)'
+        description: 'Build Type'
         required: true
-        default: 'all'
+        default: 'debug'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -31,12 +34,12 @@ jobs:
         with:
           gradle-version: 8.5
 
-      - name: Build Android APK with Gradle
+      - name: Build Android APK
         run: |
           cd android
           gradle assembleDebug --stacktrace --no-daemon
 
-      - name: Find Built APK
+      - name: Locate Built APK
         id: find_apk
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/ -name "*.apk" | head -n 1)
@@ -46,19 +49,18 @@ jobs:
           echo "Built APK: $APK_PATH"
           echo "SHA256: $SHA256"
 
-      - name: Upload APK as Workflow Artifact
+      - name: Upload APK Artifact (Downloadable from GitHub Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: crash-predictor-app
+          name: crash-predictor-debug-apk
           path: ${{ steps.find_apk.outputs.apk_path }}
           retention-days: 14
 
-      - name: Publish to GitHub Releases
+      - name: Publish to GitHub Releases (On Version Tag)
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ steps.find_apk.outputs.apk_path }}
-          name: "Release ${{ github.ref_name }}"
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
