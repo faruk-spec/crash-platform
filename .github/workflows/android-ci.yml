@@ -39,43 +39,25 @@ jobs:
           cd android
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle_build.log
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
-      - name: Dump Logs On Failure
-        if: failure()
+      - name: Calculate APK Checksum
         run: |
-          echo "=== GRADLE BUILD FAILURE DETAILS ==="
-          cat /tmp/gradle_build.log | grep -E "(e: |ERROR|FAILURE|FAILED|error:|Exception)" -B 2 -A 10 || cat /tmp/gradle_build.log | tail -n 120
-
-      - name: Upload Build Log Artifact On Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-failure-log
-          path: /tmp/gradle_build.log
-
-      - name: Locate Built APK
-        id: find_apk
-        run: |
-          APK_PATH=$(find android/app/build/outputs/apk/ -name "*.apk" | head -n 1)
-          SHA256=$(sha256sum "$APK_PATH" | awk '{print $1}')
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-          echo "Built APK: $APK_PATH"
-          echo "SHA256: $SHA256"
+          find android/app/build/outputs/apk/ -name "*.apk" -exec sha256sum {} +
 
       - name: Upload APK Artifact (Downloadable from GitHub Actions)
         uses: actions/upload-artifact@v4
         with:
-          name: crash-predictor-debug-apk
-          path: ${{ steps.find_apk.outputs.apk_path }}
+          name: crash-predictor-app
+          path: android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
           retention-days: 14
 
       - name: Publish to GitHub Releases (On Version Tag)
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ steps.find_apk.outputs.apk_path }}
+          files: android/app/build/outputs/apk/**/*.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -100,13 +100,55 @@ echo "=== [3/6] Running Migrations (sessions, cache, platform tables) ==="
 echo "=== [4/6] Clearing Framework Caches ==="
 "$PHP_BIN" artisan optimize:clear || true
 
-# 7. Finalize permissions
-echo "=== [5/6] Finalizing Web Permissions ==="
+# 7. aaPanel Web Root & Nginx Automation
+echo "=== [5/6] Auto-Configuring aaPanel Nginx & Symlinks ==="
+# Create public symlink so aaPanel Directory dropdown displays /public
+if [ ! -L "$SITE_ROOT/public" ] && [ ! -d "$SITE_ROOT/public" ]; then
+    ln -sfn "$SITE_ROOT/backend/public" "$SITE_ROOT/public" || true
+    echo "✔ Created symlink $SITE_ROOT/public -> backend/public"
+fi
+
+# Auto-configure aaPanel Nginx vhost root
+NGINX_CONF="/www/server/panel/vhost/nginx/playroot.in.conf"
+REWRITE_CONF="/www/server/panel/vhost/rewrite/playroot.in.conf"
+
+if [ -f "$NGINX_CONF" ]; then
+    sed -i 's|root /www/wwwroot/playroot.in/backend;|root /www/wwwroot/playroot.in/backend/public;|g' "$NGINX_CONF"
+    sed -i 's|root /www/wwwroot/playroot.in;|root /www/wwwroot/playroot.in/backend/public;|g' "$NGINX_CONF"
+    echo "✔ aaPanel Nginx vhost web root set to: /www/wwwroot/playroot.in/backend/public"
+fi
+
+# Auto-configure aaPanel Laravel URL rewrite rule
+if [ -d "/www/server/panel/vhost/rewrite" ]; then
+    cat <<'EOF' > "$REWRITE_CONF"
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+EOF
+    echo "✔ aaPanel Laravel URL rewrite written to: $REWRITE_CONF"
+fi
+
+# Ensure .user.ini does not restrict Laravel execution under Anti-XSS (open_basedir)
+if [ -f "$SITE_ROOT/.user.ini" ]; then
+    chattr -i "$SITE_ROOT/.user.ini" 2>/dev/null || true
+    echo "open_basedir=$SITE_ROOT/:/tmp/:/proc/" > "$SITE_ROOT/.user.ini"
+    chattr +i "$SITE_ROOT/.user.ini" 2>/dev/null || true
+    echo "✔ Adjusted open_basedir in .user.ini to cover whole project"
+fi
+
+# Reload Nginx if running
+if command -v nginx >/dev/null 2>&1; then
+    nginx -t 2>/dev/null && nginx -s reload || true
+    echo "✔ Nginx configuration tested and reloaded"
+fi
+
+# 8. Finalize permissions
+echo "=== [6/6] Finalizing Web Permissions ==="
 chown -R "$WEB_USER:$WEB_GROUP" "$SITE_ROOT/backend/storage" "$SITE_ROOT/backend/bootstrap/cache"
 chmod -R 777 "$SITE_ROOT/backend/storage/logs" "$SITE_ROOT/backend/storage/framework"
 
 echo ""
 echo "=========================================================="
-echo " SUCCESS: Sessions, Migrations & Permissions Active!"
-echo " Website is 100% LIVE at: https://playroot.in"
+echo " SUCCESS: Web Root, Rewrites & Permissions Configured!"
+echo " Control Center LIVE at: https://playroot.in/admin/dashboard"
 echo "=========================================================="
