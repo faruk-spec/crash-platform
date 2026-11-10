@@ -55,7 +55,12 @@ jobs:
           echo "=== CAPTURING GRADLE FAILURE ==="
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          tail -n 200 /tmp/gradle_build.log > build_failure.txt
+          {
+            echo "=== KOTLIN COMPILER ERRORS ==="
+            grep -E "e: " /tmp/gradle_build.log || true
+            echo "=== BUILD LOG TAIL ==="
+            tail -n 120 /tmp/gradle_build.log
+          } > build_failure.txt
           git add build_failure.txt
           git commit -m "chore(debug): capture build failure log [skip ci]" || true
           git push origin main || true

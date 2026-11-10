@@ -2,6 +2,7 @@ package com.crashgame.platform.bridge
 
 import android.webkit.JavascriptInterface
 import com.crashgame.platform.data.local.dao.ObservationDao
+import com.crashgame.platform.data.local.entity.GameRoundEntity
 import com.crashgame.platform.data.local.entity.RawObservationEntity
 import com.crashgame.platform.domain.model.RoundState
 import kotlinx.coroutines.CoroutineScope
@@ -72,14 +73,17 @@ class TelemetryWebInterface(
         )
 
         scope.launch(Dispatchers.IO) {
-            observationDao.saveCompletedRound(
-                roundUuid = UUID.randomUUID().toString(),
-                serverRoundId = roundId,
-                multiplier = finalMultiplier,
-                startedAt = _liveRoundState.value.startedAtMs,
-                crashedAt = endedAt,
-                durationMs = (endedAt - _liveRoundState.value.startedAtMs).toInt(),
-                frameHistoryJson = frameHistoryJson
+            observationDao.insertRound(
+                GameRoundEntity(
+                    roundUuid = UUID.randomUUID().toString(),
+                    serverRoundId = roundId,
+                    crashMultiplier = finalMultiplier,
+                    startedAtMs = _liveRoundState.value.startedAtMs,
+                    crashedAtMs = endedAt,
+                    durationMs = (endedAt - _liveRoundState.value.startedAtMs).toInt(),
+                    frameHistoryJson = frameHistoryJson,
+                    isSynced = false
+                )
             )
         }
     }

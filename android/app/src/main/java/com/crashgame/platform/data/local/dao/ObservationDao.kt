@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
 import com.crashgame.platform.data.local.entity.GameRoundEntity
 import com.crashgame.platform.data.local.entity.RawObservationEntity
 import kotlinx.coroutines.flow.Flow
@@ -34,27 +33,4 @@ interface ObservationDao {
 
     @Query("SELECT * FROM game_rounds ORDER BY id DESC LIMIT 20")
     fun getRecentRoundsFlow(): Flow<List<GameRoundEntity>>
-}
-
-suspend fun ObservationDao.saveCompletedRound(
-    roundUuid: String,
-    serverRoundId: String?,
-    multiplier: Float,
-    startedAt: Long,
-    crashedAt: Long,
-    durationMs: Int,
-    frameHistoryJson: String?
-) {
-    insertRound(
-        GameRoundEntity(
-            roundUuid = roundUuid,
-            serverRoundId = serverRoundId,
-            crashMultiplier = multiplier,
-            startedAtMs = startedAt,
-            crashedAtMs = crashedAt,
-            durationMs = durationMs,
-            frameHistoryJson = frameHistoryJson,
-            isSynced = false
-        )
-    )
 }

@@ -3,6 +3,9 @@ package com.crashgame.platform
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.crashgame.platform.bridge.TelemetryWebInterface
 import com.crashgame.platform.data.remote.ReleaseApiService
@@ -16,7 +19,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 class MainActivity : ComponentActivity() {
 
     private lateinit var updateManager: AppUpdateManager
-    private var pendingUpdate: UpdateInfo? = null
+    private var pendingUpdate by mutableStateOf<UpdateInfo?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
