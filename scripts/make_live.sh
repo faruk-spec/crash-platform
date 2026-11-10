@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Autonomous Crash Platform - One-Click VPS Website Activator
-# Solves: aaPanel disable_functions (putenv, proc_open), composer, permissions
+# Solves: aaPanel disable_functions, ext-fileinfo, composer, permissions
 # ==============================================================================
 
 set -e
@@ -25,8 +25,8 @@ cd "$SITE_ROOT"
 # Ensure Git safe directory
 git config --global --add safe.directory "$SITE_ROOT" 2>/dev/null || true
 
-# 1. Automatically unblock required Composer functions in aaPanel php.ini
-echo "=== [1/6] Checking aaPanel PHP Disabled Functions ==="
+# 1. Automatically unblock required Composer functions and enable fileinfo in aaPanel php.ini
+echo "=== [1/6] Checking aaPanel PHP Disabled Functions & Extensions ==="
 PHP_INI_FILES=(
     "/www/server/php/83/etc/php.ini"
     "/etc/php/8.3/cli/php.ini"
@@ -35,12 +35,14 @@ PHP_INI_FILES=(
 
 for ini in "${PHP_INI_FILES[@]}"; do
     if [ -f "$ini" ]; then
-        echo "Unblocking putenv, proc_open, popen, symlink, exec in $ini"
+        echo "Updating $ini"
         sed -i 's/putenv,//g' "$ini"
         sed -i 's/proc_open,//g' "$ini"
         sed -i 's/popen,//g' "$ini"
         sed -i 's/symlink,//g' "$ini"
         sed -i 's/exec,//g' "$ini"
+        # Enable fileinfo if commented out
+        sed -i 's/;extension=fileinfo/extension=fileinfo/g' "$ini"
     fi
 done
 
@@ -103,9 +105,10 @@ fi
 # Disable advisory blocking in composer
 "$PHP_BIN" composer.phar config policy.advisories.block false 2>/dev/null || true
 "$PHP_BIN" composer.phar config audit.block false 2>/dev/null || true
+"$PHP_BIN" composer.phar config platform.ext-fileinfo 1.0.0 2>/dev/null || true
 
-echo "Running composer update to build vendor and lock file..."
-"$PHP_BIN" -d memory_limit=1024M composer.phar update --no-dev --optimize-autoloader --no-interaction --no-audit
+echo "Running composer update (ignoring ext-fileinfo)..."
+"$PHP_BIN" -d memory_limit=1024M composer.phar update --no-dev --optimize-autoloader --no-interaction --no-audit --ignore-platform-req=ext-fileinfo
 
 # 6. Generate Application Key
 echo "=== [3/6] Generating Application Key ==="
