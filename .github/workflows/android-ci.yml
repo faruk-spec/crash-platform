@@ -39,7 +39,23 @@ jobs:
           cd android
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle_build.log
+          GRADLE_EXIT=${PIPESTATUS[0]}
+          if [ $GRADLE_EXIT -ne 0 ]; then
+            echo "### ❌ Android Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            grep -E "(e: |ERROR|FAILURE|FAILED|error:|Exception)" -B 2 -A 10 /tmp/gradle_build.log | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 80 /tmp/gradle_build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit $GRADLE_EXIT
+          fi
+
+      - name: Upload Build Log On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-failure-log
+          path: /tmp/gradle_build.log
+          if-no-files-found: ignore
 
       - name: Calculate APK Checksum
         run: |
