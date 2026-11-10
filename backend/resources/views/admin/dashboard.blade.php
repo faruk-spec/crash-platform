@@ -3,6 +3,35 @@
 @section('page_title', 'Overview Analytics & Real-Time Telemetry')
 
 @section('content')
+
+@if(isset($dbConnected) && !$dbConnected)
+<div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+        <span class="text-xl">⚠️</span>
+        <div>
+            <h4 class="text-sm font-semibold text-amber-300">Database Connection Pending</h4>
+            <p class="text-xs text-amber-200/70">
+                Update your database credentials in <code class="bg-black/30 px-1.5 py-0.5 rounded font-mono text-amber-300">backend/.env</code> and run <code class="bg-black/30 px-1.5 py-0.5 rounded font-mono text-amber-300">php artisan migrate --force</code>.
+            </p>
+        </div>
+    </div>
+    <span class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full font-mono">DB DISCONNECTED</span>
+</div>
+@elseif(isset($dbMigrated) && !$dbMigrated)
+<div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+        <span class="text-xl">ℹ️</span>
+        <div>
+            <h4 class="text-sm font-semibold text-sky-300">Database Connected — Ready for Migrations</h4>
+            <p class="text-xs text-sky-200/70">
+                To create the 25 tables, run: <code class="bg-black/30 px-1.5 py-0.5 rounded font-mono text-sky-300">cd /www/wwwroot/playroot.in/backend &amp;&amp; php artisan migrate --force</code>
+            </p>
+        </div>
+    </div>
+    <span class="text-xs bg-sky-500/20 text-sky-300 px-3 py-1 rounded-full font-mono">MIGRATION REQUIRED</span>
+</div>
+@endif
+
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
     <div class="bg-panelbg border border-slate-700/50 rounded-xl p-5 shadow-sm">
         <span class="text-xs uppercase font-semibold text-slate-400">Total Rounds Recorded</span>
@@ -97,4 +126,3 @@
     });
 </script>
 @endsection
-

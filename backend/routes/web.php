@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use App\Models\Device;
 use App\Models\GameRound;
 
@@ -10,30 +12,75 @@ Route::get('/', function () {
 
 Route::prefix('admin')->group(function () {
     Route::get('/dashboard', function () {
-        $totalRounds = GameRound::count();
-        $recent = GameRound::orderBy('id', 'desc')->take(10)->get();
-        $latestMultiplier = $recent->first()?->crash_multiplier ? number_format($recent->first()->crash_multiplier, 2) . 'x' : '1.00x';
-        $subTwoStreak = 0;
-        foreach ($recent as $r) {
-            if ($r->crash_multiplier < 2.0) $subTwoStreak++;
-            else break;
-        }
-        $activeDevices = Device::where('last_seen_at', '>=', now()->subMinutes(15))->count();
+        $dbConnected = false;
+        $dbMigrated = false;
+        $dbError = null;
 
-        return view('admin.dashboard', compact('totalRounds', 'latestMultiplier', 'subTwoStreak', 'activeDevices'));
+        try {
+            DB::connection()->getPdo();
+            $dbConnected = true;
+            $dbMigrated = Schema::hasTable('game_rounds') && Schema::hasTable('devices');
+        } catch (\Throwable $e) {
+            $dbError = $e->getMessage();
+        }
+
+        $totalRounds = 0;
+        $latestMultiplier = '1.00x';
+        $subTwoStreak = 0;
+        $activeDevices = 0;
+
+        if ($dbMigrated) {
+            try {
+                $totalRounds = GameRound::count();
+                $recent = GameRound::orderBy('id', 'desc')->take(10)->get();
+                $latestMultiplier = $recent->first()?->crash_multiplier ? number_format($recent->first()->crash_multiplier, 2) . 'x' : '1.00x';
+                foreach ($recent as $r) {
+                    if ($r->crash_multiplier < 2.0) $subTwoStreak++;
+                    else break;
+                }
+                $activeDevices = Device::where('last_seen_at', '>=', now()->subMinutes(15))->count();
+            } catch (\Throwable $e) {
+                // Keep default zeros
+            }
+        }
+
+        return view('admin.dashboard', compact(
+            'totalRounds',
+            'latestMultiplier',
+            'subTwoStreak',
+            'activeDevices',
+            'dbConnected',
+            'dbMigrated',
+            'dbError'
+        ));
     });
 
     Route::get('/devices', function () {
-        return view('admin.devices');
+        $devices = [];
+        try {
+            if (Schema::hasTable('devices')) {
+                $devices = Device::with('configuration')->get();
+            }
+        } catch (\Throwable $e) {
+            $devices = [];
+        }
+        return view('admin.devices', compact('devices'));
     });
 
     Route::get('/rounds', function () {
-        $rounds = GameRound::orderBy('id', 'desc')->paginate(25);
+        $rounds = collect();
+        try {
+            if (Schema::hasTable('game_rounds')) {
+                $rounds = GameRound::orderBy('id', 'desc')->paginate(25);
+            }
+        } catch (\Throwable $e) {
+            $rounds = collect();
+        }
         return view('admin.rounds', compact('rounds'));
     });
 
     Route::get('/activation', function () {
-        return view('admin.devices');
+        return redirect('/admin/devices');
     });
 
     Route::get('/github', function () {
@@ -41,12 +88,11 @@ Route::prefix('admin')->group(function () {
     });
 
     Route::get('/models', function () {
-        return view('admin.dashboard');
+        return redirect('/admin/dashboard');
     });
 
     Route::post('/github/trigger-build', function () {
-        // Triggers GitHub Actions workflow_dispatch via GitHub REST API
-        $owner = env('GITHUB_REPO_OWNER', 'your-org');
+        $owner = env('GITHUB_REPO_OWNER', 'faruk-spec');
         $repo = env('GITHUB_REPO_NAME', 'crash-platform');
         $token = env('GITHUB_PERSONAL_ACCESS_TOKEN');
 
@@ -61,4 +107,3 @@ Route::prefix('admin')->group(function () {
         return redirect('/admin/github')->with('message', 'Cloud build triggered successfully!');
     });
 });
-
