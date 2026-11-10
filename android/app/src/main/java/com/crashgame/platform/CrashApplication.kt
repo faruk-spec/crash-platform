@@ -26,3 +26,4 @@ class CrashApplication : Application() {
         )
     }
 }
+
