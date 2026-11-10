@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Autonomous Crash Platform - One-Click VPS Website Activator
-# Solves: composer, vendor/autoload.php, permissions, .env, and key generation
+# Solves: aaPanel disable_functions (putenv, proc_open), composer, permissions
 # ==============================================================================
 
 set -e
@@ -22,7 +22,32 @@ echo "=========================================================="
 
 cd "$SITE_ROOT"
 
-# 1. Locate PHP 8.3
+# 1. Automatically unblock required Composer functions in aaPanel php.ini
+echo "=== [1/6] Checking aaPanel PHP Disabled Functions ==="
+PHP_INI_FILES=(
+    "/www/server/php/83/etc/php.ini"
+    "/etc/php/8.3/cli/php.ini"
+    "/etc/php/8.3/fpm/php.ini"
+)
+
+for ini in "${PHP_INI_FILES[@]}"; do
+    if [ -f "$ini" ]; then
+        echo "Unblocking putenv, proc_open, popen, symlink, exec in $ini"
+        sed -i 's/putenv,//g' "$ini"
+        sed -i 's/proc_open,//g' "$ini"
+        sed -i 's/popen,//g' "$ini"
+        sed -i 's/symlink,//g' "$ini"
+        sed -i 's/exec,//g' "$ini"
+    fi
+done
+
+if [ -f "/etc/init.d/php-fpm-83" ]; then
+    /etc/init.d/php-fpm-83 reload || true
+elif systemctl is-active --quiet php-fpm-83 2>/dev/null; then
+    systemctl reload php-fpm-83 || true
+fi
+
+# 2. Locate PHP 8.3 binary
 PHP_BIN=""
 CANDIDATES=(
     "/www/server/php/83/bin/php"
@@ -44,7 +69,7 @@ fi
 
 echo "✔ Using PHP: $($PHP_BIN -v | head -n 1)"
 
-# 2. Setup .env file
+# 3. Setup .env file
 cd "$SITE_ROOT/backend"
 if [ ! -f ".env" ]; then
     cp .env.example .env
@@ -54,7 +79,7 @@ else
     echo "✔ Existing backend/.env found"
 fi
 
-# 3. Setup Storage Directories
+# 4. Setup Storage Directories
 mkdir -p storage/app/public
 mkdir -p storage/framework/cache/data
 mkdir -p storage/framework/sessions
@@ -62,33 +87,29 @@ mkdir -p storage/framework/views
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
 
-# 4. Install Composer & Vendor Dependencies
-echo "=== Installing Backend Vendor Dependencies ==="
-if [ ! -f "composer.phar" ] && ! which composer &>/dev/null; then
+# 5. Install Composer & Vendor Dependencies
+echo "=== [2/6] Installing Backend Vendor Dependencies ==="
+# Download latest composer.phar directly to ensure compatibility
+if [ ! -f "composer.phar" ]; then
     echo "Downloading self-contained composer.phar..."
     curl -sS https://getcomposer.org/installer | "$PHP_BIN"
 fi
 
-if [ -f "composer.phar" ]; then
-    "$PHP_BIN" composer.phar install --no-dev --optimize-autoloader --no-interaction
-elif which composer &>/dev/null; then
-    composer install --no-dev --optimize-autoloader --no-interaction
-else
-    echo "Error: Failed to execute Composer."
-    exit 1
-fi
+echo "Running composer install..."
+"$PHP_BIN" -d memory_limit=512M composer.phar install --no-dev --optimize-autoloader --no-interaction
 
-# 5. Generate Application Key
-echo "=== Generating Application Key ==="
+# 6. Generate Application Key
+echo "=== [3/6] Generating Application Key ==="
 "$PHP_BIN" artisan key:generate --force
 
-# 6. Optimize Caches
+# 7. Optimize Caches
+echo "=== [4/6] Clearing Framework Caches ==="
 "$PHP_BIN" artisan config:clear
 "$PHP_BIN" artisan route:clear
 "$PHP_BIN" artisan view:clear
 
-# 7. Configure Web Ownership & Permissions
-echo "=== Setting Web Permissions ==="
+# 8. Configure Web Ownership & Permissions
+echo "=== [5/6] Setting Web Permissions ==="
 if id "www" &>/dev/null; then
     WEB_USER="www"
     WEB_GROUP="www"
@@ -100,7 +121,8 @@ fi
 chown -R "$WEB_USER:$WEB_GROUP" "$SITE_ROOT"
 chmod -R 775 "$SITE_ROOT/backend/storage" "$SITE_ROOT/backend/bootstrap/cache"
 
-# 8. Verification
+# 9. Verification
+echo "=== [6/6] Verifying System State ==="
 if [ -f "$SITE_ROOT/backend/vendor/autoload.php" ]; then
     echo ""
     echo "=========================================================="
@@ -113,5 +135,5 @@ if [ -f "$SITE_ROOT/backend/vendor/autoload.php" ]; then
     echo "  2. Run migrations: cd $SITE_ROOT/backend && $PHP_BIN artisan migrate --force"
     echo ""
 else
-    echo "Warning: vendor/autoload.php still missing. Check composer output above."
+    echo "Warning: vendor/autoload.php still missing. Check output above."
 fi
