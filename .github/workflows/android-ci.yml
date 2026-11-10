@@ -39,7 +39,20 @@ jobs:
           cd android
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace --no-daemon
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee /tmp/gradle_build.log
+
+      - name: Dump Logs On Failure
+        if: failure()
+        run: |
+          echo "=== GRADLE BUILD FAILURE DETAILS ==="
+          cat /tmp/gradle_build.log | grep -E "(e: |ERROR|FAILURE|FAILED|error:|Exception)" -B 2 -A 10 || cat /tmp/gradle_build.log | tail -n 120
+
+      - name: Upload Build Log Artifact On Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-failure-log
+          path: /tmp/gradle_build.log
 
       - name: Locate Built APK
         id: find_apk

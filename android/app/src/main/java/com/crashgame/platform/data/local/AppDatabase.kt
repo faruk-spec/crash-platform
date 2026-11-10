@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "crash_platform_offline.db"
                 )
-                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING) // High-performance WAL mode
+                    .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -36,4 +36,3 @@ abstract class AppDatabase : RoomDatabase() {
         }
     }
 }
-
