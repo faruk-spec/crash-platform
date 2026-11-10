@@ -1,0 +1,67 @@
+name: VPS Zero-Downtime Deployment (aaPanel / Apache / PHP 8.3)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'web/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_mysql, curl, redis
+
+      - name: Install Composer Dependencies
+        run: |
+          cd backend
+          composer install --no-dev --optimize-autoloader --prefer-dist
+
+      - name: Deploy to aaPanel Ubuntu VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            DEPLOY_PATH="/www/wwwroot/crash-platform"
+            RELEASE_DIR="$DEPLOY_PATH/releases/$(date +'%Y%m%d%H%M%S')"
+            
+            echo "1. Creating release directory: $RELEASE_DIR"
+            mkdir -p "$RELEASE_DIR"
+            
+            echo "2. Copying files to release directory"
+            cp -r /tmp/backend-source/* "$RELEASE_DIR/"
+            
+            echo "3. Linking shared environment and storage"
+            ln -nfs "$DEPLOY_PATH/shared/.env" "$RELEASE_DIR/.env"
+            rm -rf "$RELEASE_DIR/storage"
+            ln -nfs "$DEPLOY_PATH/shared/storage" "$RELEASE_DIR/storage"
+            
+            echo "4. Executing safe database migrations"
+            cd "$RELEASE_DIR"
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            echo "5. Atomic symlink switch"
+            ln -nfs "$RELEASE_DIR" "$DEPLOY_PATH/current"
+            
+            echo "6. Restarting Horizon queues and reloading PHP 8.3"
+            php artisan horizon:terminate
+            systemctl reload php-fpm-83 || systemctl reload apache2
+            
+            echo "7. Purging old releases (keeping last 5)"
+            cd "$DEPLOY_PATH/releases" && ls -t | tail -n +6 | xargs -r rm -rf
+            echo "Deployment Completed Successfully!"
